@@ -41,21 +41,40 @@ if is_briefing_available:
     xml_content = response.read()
     tree = etree.parse(StringIO(xml_content))
     context = etree.iterparse(StringIO(xml_content))
+    #Holds analysis data not used
+    available_info = {}
+    #Holds analysis data to be used
     flight_info = {}
+    notams_list = []
     i = 0
     for action, element in context:
         #Processing tags that occur multiple times
+        ##NOTAMS
         if element.tag == 'notamdrec':
-            flight_info[element.tag + str(i)] = element.text
+            notams_element_list = list(element)
+            notam_dict = {}
+            for notam in notams_element_list:
+                notam_dict[notam.tag] = notam.text
+            notams_list.append(notam_dict)
             i += 1
+        ##WEATHER
+        elif element.tag == 'weather':
+            weather_element_list = list(element)
+            weather_dict = {}
+            for weather in weather_element_list:
+                flight_info[weather.tag] = weather.text
         else:
-            flight_info[element.tag] = element.text
+            available_info[element.tag] = element.text
+    #Adding parts that occured multiple time
+#    flight_info['notams'] = notams_list
+#    print flight_info
+    print available_info['icao_code']
+    print available_info['pid']
+    print sorted(available_info.keys())
+    print '---'
     print flight_info
-    print flight_info['icao_code']
-    print flight_info['pid']
-    print sorted(flight_info.keys())
     f = open('simbrief_plan.html', 'w')
-    f.write(flight_info['plan_html'])
+    f.write(available_info['plan_html'])
 #    print etree.tostring(tree, pretty_print=True)
 #    print etree.tostring(root)
 #driver.get(
