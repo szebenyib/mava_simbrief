@@ -1,57 +1,85 @@
-#needed for os specific separators
+# needed for os specific separators
 import os
-#selenium is needed for browser manipulation
+# selenium is needed for browser manipulation
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
-#urllib is needed to obtaing the xml
+# urllib is needed to obtaing the xml
 import urllib2
-#xmlparser
+# xmlparser
 from lxml import etree
 from StringIO import StringIO
 import lxml.html
+
 
 class MavaSimbriefIntegrator():
     """Implements the integration with the excellent Simbrief pilot briefing
     system for MALEV Virtual."""
 
     def __init__(self,
-            simbrief_query_settings=None,
-            mava_simbrief_url=None,
-            xml_link_fix_part=None):
+                 plan,
+                 simbrief_query_settings=None,
+                 mava_simbrief_url=None,
+                 xml_link_fix_part=None):
         """Init the integrator with settings that are typical of our use.
+        @param: plan - flightplan dictionary
         @param: simbrief_query_settings - a dictionary of query settings
         @param: mava_simbrief_url - url to the form that is sent to simbrief
         on the mava server
         @param: xml_link_fix_part = url to the simbrief website under which the
         xml is to be found"""
+        self.plan = plan
         if simbrief_query_settings is None:
             self.simbrief_query_settings = {
-                'navlog': 0,
-                'etops': 0,
-                'stepclimbs': 0,
-                'tlr': 0,
-                'notams': 0,
-                'firnot': 0,
-                'detail': 'detail',
+                'navlog': True,
+                'etops': True,
+                'stepclimbs': True,
+                'tlr': True,
+                'notams': True,
+                'firnot': True,
+                'maps': 'Simple',
             }
         else:
             self.simbrief_query_settings = simbrief_query_settings
         if mava_simbrief_url is None:
-            self.mava_simbrief_url = "http://flare.privatedns.org/mava_simbrief/simbrief_form.php"
+            self.mava_simbrief_url = "http://flare.privatedns.org/" \
+                                     "mava_simbrief/simbrief_form.html"
         else:
             self.mava_simbrief_url = mava_simbrief_url
         if xml_link_fix_part is None:
-            self.xml_link_fix_part = "http://www.simbrief.com/ofp/flightplans/xml/"
+            self.xml_link_fix_part = "http://www.simbrief.com/ofp/" \
+                                     "flightplans/xml/"
         else:
             self.xml_link_fix_part = xml_link_fix_part
 
+    def fill_form(self,
+                  driver,
+                  plan,
+                  simbrief_query_settings):
+        """Fills the form of the webpage using the paramteres that the class
+        has been initialized with.
+        @param: driver - a selenium webdriver
+        @param: plan - dictionary containing plan details
+        @param: simbrief_query_settings - dictionary containing plan settings"""
+        for plan_input_field in plan.iterkeys():
+            driver.find_element_by_name(plan_input_field).send_keys(
+                plan[plan_input_field]
+            )
+        for option_checkbox in simbrief_query_settings.iterkeys():
+            if (isinstance(simbrief_query_settings[option_checkbox], bool) and
+                    simbrief_query_settings[option_checkbox]):
+                # if setting is a boolean type and true
+                driver.find_element_by_name(option_checkbox).click()
+            elif (isinstance(simbrief_query_settings[option_checkbox], str)):
+                # if setting is a select
+                Select(driver.find_element_by_name(option_checkbox)).\
+                    select_by_visible_text(simbrief_query_settings[option_checkbox])
+
     def get_xml_link(self,
-            local_xml_debug=False,
-            local_html_debug=False):
+                     local_xml_debug=False,
+                     local_html_debug=False):
         """Obtains the link of the xml to be processed.
         @param local_xml_debug - if True then not the real location will be
         checked but the current working dir will be searched for 'xml.xml'
@@ -60,32 +88,42 @@ class MavaSimbriefIntegrator():
         'mava_simbrief.html'
         @returns: the string of the xml link if it could be obtained and None
         otherwise"""
-        #Finding xml_link
+        # Finding xml_link
         is_briefing_available = False
         if local_xml_debug:
+            # set link for locally debugging an existing xml file
             xml_link = ("file://"
                         + os.getcwd()
                         + os.sep
                         + "xml.xml")
             is_briefing_available = True
         else:
+            # normal operation with a real xml file
             driver = webdriver.Firefox()
-            if local_form_debug:
-                driver.get("file://" + os.getcwd() + os.sep + "mava_simbrief.html")
+            if local_html_debug:
+                driver.get(
+                    "file://" + os.getcwd() + os.sep + "simbrief_form.html")
                 is_briefing_available = True
             else:
                 driver.get(mava_simbrief_url)
-            #Loading page
+            # Entering form data
+            self.fill_form(driver,
+                           self.plan,
+                           self.simbrief_query_settings)
+            # Loading page
             button = driver.find_element_by_name("submitform")
             button.send_keys(Keys.RETURN)
-            #Checking for results
+            # Checking for results
             try:
                 is_briefing_available = (WebDriverWait(driver, 120).
-                    until(EC.presence_of_element_located((By.NAME, "hidden_is_briefing_available"))))
+                                             until(
+                    EC.presence_of_element_located(
+                        (By.NAME, "hidden_is_briefing_available"))))
                 xml_link_element = driver.find_element_by_name('hidden_link')
-                xml_link_generated_part = xml_link_element.get_attribute('value')
+                xml_link_generated_part = xml_link_element.get_attribute(
+                    'value')
                 xml_link = xml_link_fix_part + xml_link_generated_part + '.xml'
-                print xml_link
+                print(xml_link)
             finally:
                 driver.quit()
         if is_briefing_available:
@@ -94,28 +132,28 @@ class MavaSimbriefIntegrator():
             return None
 
     def get_results(self,
-            xml_link):
+                    xml_link):
         """Parses the xml for information.
         @param xml_link - a path to the xml file
         @return a dictionary of the found information"""
-        #Setup variables
-        ##Holds analysis data not used
+        # Setup variables
+        ## Holds analysis data not used
         available_info = {}
-        ##Holds analysis data to be used
+        ## Holds analysis data to be used
         flight_info = {}
-        ##Holds notams
+        ## Holds notams
         notams_list = []
-        ##Notam counter
+        ## Notam counter
         i = 0
-        #Obtaining the xml
+        # Obtaining the xml
         response = urllib2.urlopen(xml_link)
         xml_content = response.read()
-        #Processing xml
+        # Processing xml
         tree = etree.parse(StringIO(xml_content))
         context = etree.iterparse(StringIO(xml_content))
         for action, element in context:
-            #Processing tags that occur multiple times
-            ##NOTAMS
+            # Processing tags that occur multiple times
+            ## NOTAMS
             if element.tag == 'notamdrec':
                 notams_element_list = list(element)
                 notam_dict = {}
@@ -123,7 +161,7 @@ class MavaSimbriefIntegrator():
                     notam_dict[notam.tag] = notam.text
                 notams_list.append(notam_dict)
                 i += 1
-            ##WEATHER
+            ## WEATHER
             elif element.tag == 'weather':
                 weather_element_list = list(element)
                 weather_dict = {}
@@ -131,28 +169,66 @@ class MavaSimbriefIntegrator():
                     flight_info[weather.tag] = weather.text
             else:
                 available_info[element.tag] = element.text
-        #Processing plan_html
-        ##Obtaining chart links
+        # Processing plan_html
+        ## Obtaining chart links
         image_links = []
-        for image_link_a_element in lxml.html.find_class(available_info['plan_html'], 'ofpmaplink'):
+        for image_link_a_element in lxml.html.find_class(
+                available_info['plan_html'], 'ofpmaplink'):
             for image_link_tuple in image_link_a_element.iterlinks():
                 if image_link_tuple[1] == 'src':
                     image_links.append(image_link_tuple[2])
         flight_info['image_links'] = image_links
-        print available_info['icao_code']
-        print available_info['pid']
-        print sorted(available_info.keys())
+        print(available_info['icao_code'])
+        print(available_info['pid'])
+        print(sorted(available_info.keys()))
         f = open('simbrief_plan.html', 'w')
         f.write(available_info['plan_html'])
         return flight_info
 
-if __name__ == "__main__":
-    mava_simbrief_url = "http://flare.privatedns.org/mava_simbrief/simbrief_form.php"
-    xml_link_fix_part = "http://www.simbrief.com/ofp/flightplans/xml/"
 
-    integrator = MavaSimbriefIntegrator()
-    link = integrator.get_xml_link(local_xml_debug=True,
-                                local_html_debug=True)
+if __name__ == "__main__":
+    mava_simbrief_url = "http://flare.privatedns.org/" \
+                        "mava_simbrief/simbrief_form.html"
+    xml_link_fix_part = "http://www.simbrief.com/ofp/" \
+                        "flightplans/xml/"
+    plan = {
+        'airline': 'MAH',
+        'fltnum': '764',
+        'type': 'B738',
+        'orig': 'LHBP',
+        'dest': 'LSZH',
+        'date': '25FEB15',
+        'deph': '20',
+        'depm': '00',
+        'route': 'GILEP DCT ARSIN UL851 SITNI UL856 NEGRA',
+        'steh': '22',
+        'stem': '05',
+        'reg': 'HA-LOC',
+        'fin': 'LOC',
+        'selcal': 'XXXX',
+        'pax': '100',
+        'altn': 'LSGG',
+        'fl': '36000',
+        'cpt': 'BALINT SZEBENYI',
+        'pid': 'P008',
+        'fuelfactor': 'P000',
+        'manualzfw': '42.7',
+        'addedfuel': '2.5',
+        'contpct': '0.05',
+        'resvrule': '45',
+        'taxiout': '10',
+        'taxiin': '4',
+        'cargo': '5.0',
+        'origrwy': '31L',
+        'destrwy': '34',
+        'climb': '250/300/78',
+        'descent': '80/280/250',
+        'cruise': 'LRC',
+        'civalue': 'AUTO',
+    }
+    integrator = MavaSimbriefIntegrator(plan=plan)
+    link = integrator.get_xml_link(local_xml_debug=False,
+                                   local_html_debug=False)
     flight_info = integrator.get_results(link)
-    print flight_info
+    print(flight_info)
 

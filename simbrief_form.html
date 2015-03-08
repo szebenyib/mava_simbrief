@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>Malev Virtual Simbrief Integration System</title>
+	<meta name="author" content="Balint Szebenyi, Derek Mayer">
+	<meta charset="UTF-8">
+	<link rel="icon" href="../images/favicon.ico" type="image/x-icon">
+	<link rel="shortcut icon" href="../images/favicon.ico" type="image/x-icon">
+	<!--<style media="screen" type="text/css">
+	input {
+		background-color: transparent;
+		color: white;
+		border: none;
+		outline: none;
+	}
+	</style><!--display: none !important;-->
+	<script type="text/javascript" src="simbrief.apiv1.js"></script>
+</head>
+
+<body>
+	<form id="sbapiform">
+		<input type="text" name="airline" value="">
+		<input type="text" name="fltnum" value="">
+		<input type="text" name="type" value="">
+		<input type="text" name="orig" value="">
+		<input type="text" name="dest" value="">
+		<input type="text" name="date" value="">
+		<input type="text" name="deph" value="">
+		<input type="text" name="depm" value="">
+		<input type="text" name="route" value="">
+		<input type="text" name="steh" value="">
+		<input type="text" name="stem" value="">
+		<input type="text" name="reg" value="">
+		<input type="text" name="fin" value="">
+		<input type="text" name="selcal" value="">
+		<input type="text" name="pax" value="">
+		<input type="text" name="altn" value="">
+		<input type="text" name="fl" value="">
+		<input type="text" name="cpt" value="">
+		<input type="text" name="pid" value="">
+		<input type="text" name="fuelfactor" value="">
+		<input type="text" name="manualzfw" value="">
+		<input type="text" name="addedfuel" value="">
+		<input type="text" name="contpct" value="">
+		<input type="text" name="resvrule" value="">
+		<input type="text" name="taxiout" value="">
+		<input type="text" name="taxiin" value="">
+		<input type="text" name="cargo" value="">
+		<input type="text" name="origrwy" value="">
+		<input type="text" name="destrwy" value="">
+		<input type="text" name="climb" value="">
+		<input type="text" name="descent" value="">
+		<input type="text" name="cruise" value="">
+		<input type="text" name="civalue" value="">
+		<table>
+			<tr>
+				<td>Detailed Navlog: </td>
+				<td><input type="checkbox" name="navlog" value="1"></td>
+			</tr>
+			<tr>
+				<td>ETOPS Planning: </td>
+				<td><input type="checkbox" name="etops" value="1"></td>
+			</tr>
+			<tr>
+				<td>Plan Stepclimbs: </td>
+				<td><input type="checkbox" name="stepclimbs" value="1"></td>
+			</tr>
+			<tr>
+				<td>Runway Analysis: </td>
+				<td><input type="checkbox" name="tlr" value="1"></td>
+			</tr>
+			<tr>
+				<td>Include NOTAMS: </td>
+				<td><input type="checkbox" name="notams" value="1"></td>
+			</tr>
+			<tr>
+				<td>FIR NOTAMS: </td>
+				<td><input type="checkbox" name="firnot" value="1"></td>
+			</tr>
+			<tr>
+				<td>Flight Maps: </td>
+				<td><select name="maps"><option value="detail">Detailed</option><option value="simple">Simple</option><option value="none">None</option></select></td>
+			</tr>
+		</table>
+		<input type="button" name="submitform" onclick="simbriefsubmit('http://flare.privatedns.org/mava_simbrief/simbrief_briefing.php?test=0');" style="font-size:30px" value="Generate">
+	</form>
+</body>
+</html>
+
