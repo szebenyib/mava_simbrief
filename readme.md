@@ -14,7 +14,11 @@ at the simbrief webpage.
                  mava_simbrief_url="http://virtualairlines.hu/" \
                                    "mava_simbrief/simbrief_form.html,
                  xml_link_fix_part="http://www.simbrief.com/ofp/" \
-                                     "flightplans/xml/")*
+                                   "flightplans/xml/")*
+*link = integrator.get_xml_link(local_xml_debug=False,
+                                local_html_debug=False)
+*flight_info = integrator.get_results(link)
+*print(flight_info)
 
 Of course you first have to fill the plan dictionary and the
 simbrief_query_settings dictionary. These dictionaries consist of key-value
@@ -24,9 +28,11 @@ checkboxes with the value True and selects with the strings that are visible
 on the screen, not in the html code.
 All parameters are advised to be filled out that is offered at the API page,
 see: http://www.simbrief.com/forum/viewtopic.php?f=6&t=243
+It is advised to fix some of the simbrief_query_settings in the implementation,
+e.g.: planformat, units, notams
 
 **Keys detailed**
-[plan]
+[plan]:
 - airline: 3 letter ICAO identifier (e.g.: 'MAH')
 - fltnum: desired flight number without airline identifier (e.g.: '764')
 - type: 4 letter ICAO type designator (e.g.: 'B738'), see:
@@ -48,7 +54,7 @@ empty or 'AUTO' then the system will choose the flight level
 - cpt: pilot's name (e.g.: 'BALINT SZEBENYI')
 - pid: pilot's internal id at virtual airline (e.g.: 'P008')
 - fuelfactor: fuel burn multiplier used to tweak calculations to an add-on
-aircraft (e.g.: 'P05' equals +5%)
+aircraft (e.g.: 'P05' equals +5%), valid values: M30..P30
 - pax: number of passengers on board (e.g.: '100'), it is 230 lbs per pax with
 bags, it is added to the empty weight to obtain the zero fuel weight
 - cargo: additional commercial cargo in thousands (e.g.: '5.0'), it is
@@ -67,54 +73,49 @@ minutes (e.g.: '4')
 calculated value of the planning system (e.g.: '0.5')
 - origrwy: planned departure runway (e.g.: '31L')
 - destrwy: planned arrival runway (e.g.: '34')
-        
-        'climb': '250/300/78',
-        'descent': '80/280/250',
-        'cruise': 'LRC',
-        'civalue': 'AUTO',
-*
-self.simbrief_query_settings = {
-    'navlog': True,
-    'etops': True,
-    'stepclimbs': True,
-    'tlr': True,
-    'notams': True,
-    'firnot': True,
-    'maps': 'Simple',
-}
+- climb: climb profile for the aircraft (e.g.: '250/300/78'), valid values
+are aircraft specific
+- cruise: cruise profile for the aircraft (e.g.: 'LRC'), valid values
+are aircraft specific
+- descent: descent profile for the aircraft (e.g.: '80/280/250'), valid values
+are aircraft specific
+- civalue: costindex (e.g.: 'AUTO'), valid values: AUTO, 0..100, it is only
+taken into consideration if the cruise profile is 'CI'
 
-plan = {
-        'airline': 'MAH',
-        'fltnum': '764',
-        'type': 'B738',
-        'orig': 'LHBP',
-        'dest': 'LSZH',
-        'date': '25FEB15',
-        'deph': '20',
-        'depm': '00',
-        'route': 'GILEP DCT ARSIN UL851 SITNI UL856 NEGRA',
-        'steh': '22',
-        'stem': '05',
-        'reg': 'HA-LOC',
-        'fin': 'LOC',
-        'selcal': 'XXXX',
-        'pax': '100',
-        'altn': 'LSGG',
-        'fl': '36000',
-        'cpt': 'BALINT SZEBENYI',
-        'pid': 'P008',
-        'fuelfactor': 'P000',
-        'manualzfw': '42.7',
-        'addedfuel': '2.5',
-        'contpct': '0.05',
-        'resvrule': '45',
-        'taxiout': '10',
-        'taxiin': '4',
-        'cargo': '5.0',
-        'origrwy': '31L',
-        'destrwy': '34',
-        'climb': '250/300/78',
-        'descent': '80/280/250',
-        'cruise': 'LRC',
-        'civalue': 'AUTO',
-    }
+[simbrief_query_settings]:
+- planformat: flight plan format (e.g.: lido, aal, aca, afr, awe,
+baw, ber, dal, dlh, jbu, jza, ryr, uae, ual, ual f:wz)
+- units: weight (e.g.: 'LBS' or 'KGS')
+- navlog: (e.g.: True)
+- etops: (e.g.: True)
+- stepclimbs: (e.g.: True)
+- tlr: runway analysis (e.g.: True)
+- notams: include notams (e.g.: True)
+- firnot: FIRNOTAMs (e.g.: True)
+- maps: map detail level (e.g.: 'Simple', 'Detailed', 'None')
+
+**Aircraft specific possibilities**
+[B736, B737, B738]:
+- climb profile: '250/280/78'
+- cruise profile: 'CI', 'LRC', 'M75', 'M78', 'M79', 'M80'
+- descent profile: '78/280/250'
+
+[B763]:
+- climb profile: '250/290/78'
+- cruise profile: 'CI', 'LRC', 'M76', 'M78', 'M80', 'M82', 'M84'
+- descent profile: '79/290/250'
+
+[CRJ2]:
+- climb profile: 'AUTO'
+- cruise profile: '290/M72'
+- descent profile: 'AUTO'
+
+[DH8D]:
+- climb profile: 'I-850', 'II-850', 'III-850', 'I-900', 'II-900', 'III-900'
+- cruise profile: 'ISC', 'LRC', 'HSR', 'MCR'
+- descent profile: 'I-850', 'II-850', 'III-850'
+
+[T154]:
+- climb profile: 'AUTO'
+- cruise profile: '300/M80'
+- descent profile: 'AUTO'

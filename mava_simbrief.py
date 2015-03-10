@@ -6,7 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
-# urllib is needed to obtaing the xml
+# urllib is needed to obtain the xml
 import urllib2
 # xmlparser
 from lxml import etree
@@ -115,8 +115,7 @@ class MavaSimbriefIntegrator():
             button.send_keys(Keys.RETURN)
             # Checking for results
             try:
-                is_briefing_available = (WebDriverWait(driver, 120).
-                                             until(
+                is_briefing_available = (WebDriverWait(driver, 120).until(
                     EC.presence_of_element_located(
                         (By.NAME, "hidden_is_briefing_available"))))
                 xml_link_element = driver.find_element_by_name('hidden_link')
@@ -164,7 +163,6 @@ class MavaSimbriefIntegrator():
             ## WEATHER
             elif element.tag == 'weather':
                 weather_element_list = list(element)
-                weather_dict = {}
                 for weather in weather_element_list:
                     flight_info[weather.tag] = weather.text
             else:
@@ -178,8 +176,6 @@ class MavaSimbriefIntegrator():
                 if image_link_tuple[1] == 'src':
                     image_links.append(image_link_tuple[2])
         flight_info['image_links'] = image_links
-        print(available_info['icao_code'])
-        print(available_info['pid'])
         print(sorted(available_info.keys()))
         f = open('simbrief_plan.html', 'w')
         f.write(available_info['plan_html'])
