@@ -20,11 +20,13 @@ class MavaSimbriefIntegrator():
 
     def __init__(self,
                  plan,
+                 driver=None,
                  simbrief_query_settings=None,
                  mava_simbrief_url=None,
                  xml_link_fix_part=None):
         """Init the integrator with settings that are typical of our use.
         @param: plan - flightplan dictionary
+        @param: webdriver - a selenium webdriver
         @param: simbrief_query_settings - a dictionary of query settings
         @param: mava_simbrief_url - url to the form that is sent to simbrief
         on the mava server
@@ -43,11 +45,18 @@ class MavaSimbriefIntegrator():
             }
         else:
             self.simbrief_query_settings = simbrief_query_settings
+
+        if driver is None:
+            self.driver = webdriver.Firefox()
+        else:
+            self.driver = driver
+
         if mava_simbrief_url is None:
             self.mava_simbrief_url = "http://flare.privatedns.org/" \
                                      "mava_simbrief/simbrief_form.html"
         else:
             self.mava_simbrief_url = mava_simbrief_url
+
         if xml_link_fix_part is None:
             self.xml_link_fix_part = "http://www.simbrief.com/ofp/" \
                                      "flightplans/xml/"
@@ -55,7 +64,6 @@ class MavaSimbriefIntegrator():
             self.xml_link_fix_part = xml_link_fix_part
 
     def fill_form(self,
-                  driver,
                   plan,
                   simbrief_query_settings):
         """Fills the form of the webpage using the paramteres that the class
@@ -64,18 +72,18 @@ class MavaSimbriefIntegrator():
         @param: plan - dictionary containing plan details
         @param: simbrief_query_settings - dictionary containing plan settings"""
         for plan_input_field in plan.iterkeys():
-            driver.find_element_by_name(plan_input_field).send_keys(
-                plan[plan_input_field]
-            )
+            self.driver.find_element_by_name(plan_input_field).send_keys(
+                plan[plan_input_field])
         for option_checkbox in simbrief_query_settings.iterkeys():
             if (isinstance(simbrief_query_settings[option_checkbox], bool) and
                     simbrief_query_settings[option_checkbox]):
                 # if setting is a boolean type and true
-                driver.find_element_by_name(option_checkbox).click()
-            elif (isinstance(simbrief_query_settings[option_checkbox], str)):
+                self.driver.find_element_by_name(option_checkbox).click()
+            elif isinstance(simbrief_query_settings[option_checkbox], str):
                 # if setting is a select
-                Select(driver.find_element_by_name(option_checkbox)).\
-                    select_by_visible_text(simbrief_query_settings[option_checkbox])
+                Select(self.driver.find_element_by_name(option_checkbox)).\
+                    select_by_visible_text(simbrief_query_settings[
+                    option_checkbox])
 
     def get_xml_link(self,
                      local_xml_debug=False,
@@ -99,32 +107,31 @@ class MavaSimbriefIntegrator():
             is_briefing_available = True
         else:
             # normal operation with a real xml file
-            driver = webdriver.Firefox()
             if local_html_debug:
-                driver.get(
+                self.driver.get(
                     "file://" + os.getcwd() + os.sep + "simbrief_form.html")
                 is_briefing_available = True
             else:
-                driver.get(mava_simbrief_url)
+                self.driver.get(mava_simbrief_url)
             # Entering form data
-            self.fill_form(driver,
-                           self.plan,
+            self.fill_form(self.plan,
                            self.simbrief_query_settings)
             # Loading page
-            button = driver.find_element_by_name("submitform")
+            button = self.driver.find_element_by_name("submitform")
             button.send_keys(Keys.RETURN)
             # Checking for results
             try:
-                is_briefing_available = (WebDriverWait(driver, 120).until(
-                    EC.presence_of_element_located(
-                        (By.NAME, "hidden_is_briefing_available"))))
-                xml_link_element = driver.find_element_by_name('hidden_link')
+                is_briefing_available = (WebDriverWait(self.driver, 120).
+                                         until(EC.presence_of_element_located(
+                    (By.NAME, "hidden_is_briefing_available"))))
+                xml_link_element = self.driver.find_element_by_name(
+                    'hidden_link')
                 xml_link_generated_part = xml_link_element.get_attribute(
                     'value')
                 xml_link = xml_link_fix_part + xml_link_generated_part + '.xml'
                 print(xml_link)
             finally:
-                driver.quit()
+                self.driver.quit()
         if is_briefing_available:
             return xml_link
         else:
