@@ -112,7 +112,8 @@ class MavaSimbriefIntegrator():
                     "file://" + os.getcwd() + os.sep + "simbrief_form.html")
                 is_briefing_available = True
             else:
-                self.driver.get(mava_simbrief_url)
+                self.driver.get(self.mava_simbrief_url)
+
             # Entering form data
             self.fill_form(self.plan,
                            self.simbrief_query_settings)
