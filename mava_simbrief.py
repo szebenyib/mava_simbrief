@@ -199,7 +199,8 @@ class MavaSimbriefIntegrator():
             return None
 
     def get_results(self,
-                    xml_link):
+                    xml_link,
+                    html_file_path = None):
         """Parses the xml for information.
         @param xml_link - a path to the xml file
         @return a dictionary of the found information"""
@@ -245,8 +246,10 @@ class MavaSimbriefIntegrator():
                     image_links.append(image_link_tuple[2])
         flight_info['image_links'] = image_links
         print(sorted(available_info.keys()))
-        f = open('simbrief_plan.html', 'w')
-        f.write(available_info['plan_html'])
+        if html_file_path is None:
+            html_file_path = 'simbrief_plan.html'
+        with open(html_file_path, 'w') as f:
+            f.write(available_info['plan_html'])
         return flight_info
 
     def _find_window_by_title(self, title, timeout = 10.0):
