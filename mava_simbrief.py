@@ -12,6 +12,7 @@ import urllib2
 from lxml import etree
 from StringIO import StringIO
 import lxml.html
+import time
 
 
 class MavaSimbriefIntegrator():
@@ -106,6 +107,12 @@ class MavaSimbriefIntegrator():
                         + "xml.xml")
             is_briefing_available = True
         else:
+            # There must be window whose title is 'SimBrief' so that we
+            # could find our one among several
+            if self._find_window_by_title("SimBrief") is None:
+                print "No SimBrief window was found!"
+                return None
+
             # normal operation with a real xml file
             if local_html_debug:
                 self.driver.get(
@@ -114,9 +121,16 @@ class MavaSimbriefIntegrator():
             else:
                 self.driver.get(self.mava_simbrief_url)
 
+            main_handle = self._find_window_by_title("Malev Virtual Simbrief Integration System")
+            if main_handle is None:
+                print "No SimBrief Integration window was found!"
+                return None
+
             # Entering form data
+            self.driver.switch_to_window(main_handle)
             self.fill_form(self.plan,
                            self.simbrief_query_settings)
+
             # Loading page
             button = self.driver.find_element_by_name("submitform")
             button.send_keys(Keys.RETURN)
@@ -189,6 +203,27 @@ class MavaSimbriefIntegrator():
         f.write(available_info['plan_html'])
         return flight_info
 
+    def _find_window_by_title(self, title, timeout = 10.0):
+        """Find the window with the given title.
+
+        Switch to that window and return its handle."""
+        def predicate(handle):
+            self.driver.switch_to.window(handle)
+            return self.driver.title == title
+
+        return self._find_window(predicate, timeout = timeout)
+
+    def _find_window(self, predicate, timeout = 10.0):
+        """Find a window that fulfills the given predicate."""
+        window_handle = None
+        end_time = time.time() + timeout
+        while window_handle is None and end_time > time.time():
+            for handle in self.driver.window_handles:
+                if predicate(handle):
+                    window_handle = handle
+                    break
+
+        return window_handle
 
 if __name__ == "__main__":
     mava_simbrief_url = "http://flare.privatedns.org/" \
