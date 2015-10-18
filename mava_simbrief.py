@@ -2,6 +2,8 @@
 import os
 # selenium is needed for browser manipulation
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchWindowException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
@@ -87,9 +89,13 @@ class MavaSimbriefIntegrator():
                     option_checkbox])
 
     def get_xml_link(self,
+                     get_credentials,
                      local_xml_debug=False,
                      local_html_debug=False):
         """Obtains the link of the xml to be processed.
+        @param get_credentials - a function, which should return a pair of the
+        user name and password to log in to SimBrief. It gets an integer which
+        is the number of times it has been called so far.
         @param local_xml_debug - if True then not the real location will be
         checked but the current working dir will be searched for 'xml.xml'
         @param local_html_debug - if True then not real mava_simbrief_url will
@@ -126,6 +132,10 @@ class MavaSimbriefIntegrator():
                 print "No SimBrief Integration window was found!"
                 return None
 
+            # Make a copy of the window handles before submitting the form,
+            # so that we could find the popup
+            handles = self.driver.window_handles[:]
+
             # Entering form data
             self.driver.switch_to_window(main_handle)
             self.fill_form(self.plan,
@@ -134,19 +144,52 @@ class MavaSimbriefIntegrator():
             # Loading page
             button = self.driver.find_element_by_name("submitform")
             button.send_keys(Keys.RETURN)
-            # Checking for results
-            try:
-                is_briefing_available = (WebDriverWait(self.driver, 120).
-                                         until(EC.presence_of_element_located(
-                    (By.NAME, "hidden_is_briefing_available"))))
-                xml_link_element = self.driver.find_element_by_name(
-                    'hidden_link')
-                xml_link_generated_part = xml_link_element.get_attribute(
-                    'value')
-                xml_link = xml_link_fix_part + xml_link_generated_part + '.xml'
-                print(xml_link)
-            finally:
-                self.driver.quit()
+
+            update_progress("Waiting for login...", False)
+            popup_handle = self._find_popup(handles)
+            if popup_handle is None:
+                print "No popup window was found!"
+                return None
+
+            login_count = 0
+            end_time = time.time() + 120.0
+            while not is_briefing_available and end_time > time.time():
+                try:
+                    self.driver.switch_to.window(popup_handle)
+
+                    userElement = self.driver.find_element_by_name("user")
+
+                    if userElement is not None:
+                        update_progress("Logging in...", False)
+                        (userName, password) = get_credentials(login_count)
+                        userElement.send_keys(userName)
+                        self.driver.find_element_by_name("pass").send_keys(password)
+                        self.driver.find_element_by_name("staylogged").click()
+
+                        self.driver.find_element(By.XPATH,
+                                                "//input[@value='Login']").send_keys(Keys.RETURN)
+                        login_count += 1
+                except NoSuchElementException:
+                    pass
+                except NoSuchWindowException:
+                    pass
+
+                update_progress("Waiting for the result...", False)
+                self.driver.switch_to.window(main_handle)
+                try:
+                    if self.driver.find_element_by_name("hidden_is_briefing_available") is not None:
+                        is_briefing_available = True
+                        xml_link_element = self.driver.find_element_by_name(
+                            'hidden_link')
+                        xml_link_generated_part = xml_link_element.get_attribute(
+                            'value')
+                        xml_link = self.xml_link_fix_part + xml_link_generated_part + '.xml'
+                        print(xml_link)
+                except NoSuchElementException:
+                    pass
+
+            self.driver.quit()
+
         if is_briefing_available:
             return xml_link
         else:
@@ -212,6 +255,15 @@ class MavaSimbriefIntegrator():
             return self.driver.title == title
 
         return self._find_window(predicate, timeout = timeout)
+
+    def _find_popup(self, handles, timeout = 10.0):
+        """Find a popup, i.e. a new window being created.
+
+        handles is a list of window handles that existed before the popup was
+        expected to be created. If a new handle is found, that is assumed to be
+        the popup window."""
+        return self._find_window(lambda handle: handle not in handles,
+                                 timeout = timeout)
 
     def _find_window(self, predicate, timeout = 10.0):
         """Find a window that fulfills the given predicate."""
