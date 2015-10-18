@@ -89,7 +89,7 @@ class MavaSimbriefIntegrator():
                     option_checkbox])
 
     def get_xml_link(self,
-                     get_credentials,
+                     get_credentials, update_progress,
                      local_xml_debug=False,
                      local_html_debug=False):
         """Obtains the link of the xml to be processed.
@@ -113,6 +113,7 @@ class MavaSimbriefIntegrator():
                         + "xml.xml")
             is_briefing_available = True
         else:
+            update_progress("Looking for a browser...", False)
             # There must be window whose title is 'SimBrief' so that we
             # could find our one among several
             if self._find_window_by_title("SimBrief") is None:
@@ -120,6 +121,7 @@ class MavaSimbriefIntegrator():
                 return None
 
             # normal operation with a real xml file
+            update_progress("Retrieving form...", False)
             if local_html_debug:
                 self.driver.get(
                     "file://" + os.getcwd() + os.sep + "simbrief_form.html")
@@ -137,6 +139,7 @@ class MavaSimbriefIntegrator():
             handles = self.driver.window_handles[:]
 
             # Entering form data
+            update_progress("Filling form...", False)
             self.driver.switch_to_window(main_handle)
             self.fill_form(self.plan,
                            self.simbrief_query_settings)
