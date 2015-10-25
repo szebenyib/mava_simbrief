@@ -217,6 +217,11 @@ class MavaSimbriefIntegrator():
                         update_progress(MavaSimbriefIntegrator.PROGRESS_LOGGING_IN,
                                         MavaSimbriefIntegrator.RESULT_NONE, None)
                         (userName, password) = get_credentials(login_count)
+                        if userName is None or password is None:
+                            update_progress(MavaSimbriefIntegrator.PROGRESS_WAITING_LOGIN,
+                                            MavaSimbriefIntegrator.RESULT_ERROR_LOGIN_FAILED, None)
+                            return None
+
                         userElement.send_keys(userName)
                         self.driver.find_element_by_name("pass").send_keys(password)
                         self.driver.find_element_by_name("staylogged").click()
