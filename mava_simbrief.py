@@ -21,45 +21,33 @@ class MavaSimbriefIntegrator():
     """Implements the integration with the excellent Simbrief pilot briefing
     system for MALEV Virtual."""
 
+    # The following constants are used for progress reporting.
     # Progress stage: searching the suitable browser window
     PROGRESS_SEARCHING_BROWSER = 1
-
     # Progress stage: retrieving the form from the server
     PROGRESS_LOADING_FORM = 2
-
     # Progress stage: filling the form
     PROGRESS_FILLING_FORM = 3
-
     # Progress stage: waiting for the login
     PROGRESS_WAITING_LOGIN = 4
-
     # Progress stage: logging in
     PROGRESS_LOGGING_IN = 5
-
     # Progress stage: waiting for result
     PROGRESS_WAITING_RESULT = 6
-
     # The maximal reserved progress stage
     PROGRESS_MAX = 16
-
     # Result code: none (i.e. the SimBrief query is in progress).
     RESULT_NONE = 0
-
     # Result code: success
     RESULT_OK = 1
-
     # Result code: other error
     RESULT_ERROR_OTHER = 2
-
     # Result code: form could not be loaded
     RESULT_ERROR_NO_FORM = 11
-
     # Result code: no popup (i.e. login) window found
     RESULT_ERROR_NO_POPUP = 12
-
     # Result code: login failed
     RESULT_ERROR_LOGIN_FAILED = 13
-
     # The maximal reserved result code
     RESULT_MAX = 32
 
@@ -131,7 +119,8 @@ class MavaSimbriefIntegrator():
                     option_checkbox])
 
     def get_xml_link(self,
-                     get_credentials, update_progress,
+                     get_credentials,
+                     update_progress,
                      local_xml_debug=False,
                      local_html_debug=False):
         """Obtains the link of the xml to be processed.
@@ -175,7 +164,8 @@ class MavaSimbriefIntegrator():
             else:
                 self.driver.get(self.mava_simbrief_url)
 
-            main_handle = self._find_window_by_title("Malev Virtual Simbrief Integration System")
+            main_handle = self._find_window_by_title("Malev Virtual " + \
+                    "Simbrief Integration System")
             if main_handle is None:
                 print "No SimBrief Integration window was found!"
                 update_progress(MavaSimbriefIntegrator.PROGRESS_LOADING_FORM,
@@ -334,11 +324,14 @@ class MavaSimbriefIntegrator():
         """Find a window that fulfills the given predicate."""
         window_handle = None
         end_time = time.time() + timeout
-        while window_handle is None and end_time > time.time():
+        is_not_found_yet = True
+        while (window_handle is None
+            and end_time > time.time()
+            and is_not_found_yet):
             for handle in self.driver.window_handles:
                 if predicate(handle):
                     window_handle = handle
-                    break
+                    is_not_found_yet = False
 
         return window_handle
 
